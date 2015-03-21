@@ -25,8 +25,8 @@ namespace Inceptum.Rest
         /// Initializes a new instance of the <see cref="RestClientBase"/> class.
         /// </summary>
         /// <param name="addresses">The addresses pool.</param>
-        /// <param name="failTimeout">Timeoute before address would not be used since rquest to the address fails (my be violated if all addresses in pool are excluded).</param>
-        /// <param name="farmRequestTimeout">The farm request timeout. During this timeout <see cref="RestClientBase"/> will repeate reuest to addresses in the pool till it scceeds</param>
+        /// <param name="failTimeout">Timeoute address should be excluded from pool after rquest to the address fails (may be violated if all addresses in pool are excluded).</param>
+        /// <param name="farmRequestTimeout">The farm request timeout. During this timeout <see cref="RestClientBase"/> will reuqest addresses in the pool till gets valid response (HTTP status 200 or 400 or 404)</param>
         /// <param name="singleAddressTimeout">The single address timeout.</param>
         /// <param name="handlerFactory">The handler factory.</param>
         /// <exception cref="System.ArgumentNullException">addresses</exception>
