@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Inceptum.Rest</id>
+    <version>$version$</version>
+    <title>Inceptum.Rest</title>
+    <authors>InceptumSoft</authors>
+    <owners>InceptumSoft</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Inceptum.Rest</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright 2015</copyright>
+    <tags></tags>
+    <dependencies>
+    </dependencies>
+  </metadata>
+</package>
