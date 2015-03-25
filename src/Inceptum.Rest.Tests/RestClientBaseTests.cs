@@ -25,9 +25,14 @@ namespace Inceptum.Rest.Tests
         {
         }
 
+        public Task<string> SendAsync(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo)
+        {
+            return SendAsync(requestFactory, s => s, cultureInfo);
+        }
+
         public Task<string> GetData(Uri relativeUri, CultureInfo cultureInfo)
         {
-            return GetData(relativeUri, s => s, CultureInfo.CurrentUICulture);
+            return GetData(relativeUri, s => s, cultureInfo);
         }
     }
 
@@ -141,8 +146,23 @@ namespace Inceptum.Rest.Tests
                 }
             }
         }
-        
-        
+
+
+        [Test]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public async void RequestUriShouldBeRelativeTest()
+        {
+            using (var testRestClient =new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray()))
+            {
+                for (int j = 1; j <= SERVERS_COUNT; j++)
+                {
+                    TestController.FailingPorts.Add(1000+j);
+                }
+                int i = 0;
+                await testRestClient.SendAsync(() => new HttpRequestMessage(HttpMethod.Get, i++ == 0 ? new Uri("/ok", UriKind.RelativeOrAbsolute) : new Uri("http://localhost:1001/ok", UriKind.RelativeOrAbsolute)), CultureInfo.CurrentUICulture);
+            }
+        }
+
         [Test]
         public async void AddressesSelcetionTest()
         {

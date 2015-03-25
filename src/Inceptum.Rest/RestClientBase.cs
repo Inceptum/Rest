@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -98,8 +99,12 @@ namespace Inceptum.Rest
             return client;
         }
 
-      
-        protected async Task<TResult> GetData<TResult>(Uri relativeUri, Func<string, TResult> res, CultureInfo cultureInfo)
+
+        protected Task<TResult> GetData<TResult>(Uri relativeUri, Func<string, TResult> res, CultureInfo cultureInfo)
+        {
+            return SendAsync(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), res, cultureInfo);
+        }
+        protected async Task<TResult> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory,Func<string, TResult> res, CultureInfo cultureInfo)
         {
             if (m_IsDisposed)
                 throw new ObjectDisposedException("");
@@ -112,23 +117,33 @@ namespace Inceptum.Rest
                     bool success = false;
                     try
                     {
-                        var response = await client.GetAsync(relativeUri).ConfigureAwait(false);
-                        if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.NotFound ||
-                            response.StatusCode == HttpStatusCode.BadRequest)
+                        var request = requestFactory();
+
+                        if (request == null)
+                            throw new InvalidOperationException("can not send null request");
+                        if (request.RequestUri.IsAbsoluteUri)
+                            throw new InvalidOperationException("request should have relative uri");
+                        try
                         {
-                            var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            success = true;
-                            return res(content);
+
+                            var response = await client.SendAsync(request).ConfigureAwait(false);
+                            if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.NotFound ||
+                                response.StatusCode == HttpStatusCode.BadRequest)
+                            {
+                                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                                success = true;
+                                return res(content);
+                            }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                        //TODO: logging
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
+                            //TODO: logging
+                        }
                     }
                     finally
                     {
-                        m_UriPool.ReportAttempt(baseUri,success);
+                        m_UriPool.ReportAttempt(baseUri, success);
                     }
                 }
             }
