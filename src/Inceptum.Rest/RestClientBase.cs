@@ -137,7 +137,9 @@ namespace Inceptum.Rest
                         }
                         catch (Exception e)
                         {
+#if DEBUG
                             Console.WriteLine(e.Message);
+#endif
                             //TODO: logging
                         }
                     }
