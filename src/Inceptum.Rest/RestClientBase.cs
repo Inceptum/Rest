@@ -27,7 +27,7 @@ namespace Inceptum.Rest
         /// </summary>
         /// <param name="addresses">The addresses pool.</param>
         /// <param name="failTimeout">Timeoute address should be excluded from pool after rquest to the address fails (may be violated if all addresses in pool are excluded).</param>
-        /// <param name="farmRequestTimeout">The farm request timeout. During this timeout <see cref="RestClientBase"/> will reuqest addresses in the pool till gets valid response (HTTP status 200 or 400 or 404)</param>
+        /// <param name="farmRequestTimeout">The farm request timeout. During this timeout <see cref="RestClientBase"/> will reuqest addresses in the pool till gets valid response (HTTP status >=500)</param>
         /// <param name="singleAddressTimeout">The single address timeout.</param>
         /// <param name="handlerFactory">The handler factory.</param>
         /// <exception cref="System.ArgumentNullException">addresses</exception>
@@ -127,8 +127,7 @@ namespace Inceptum.Rest
                         {
 
                             var response = await client.SendAsync(request).ConfigureAwait(false);
-                            if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.NotFound ||
-                                response.StatusCode == HttpStatusCode.BadRequest)
+                            if (response.StatusCode <HttpStatusCode.InternalServerError)
                             {
                                 var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                                 success = true;
