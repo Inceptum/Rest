@@ -7,11 +7,60 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inceptum.Rest
 {
+    public class NodeRequestResult
+    {
+        public NodeRequestResult(HttpRequestMessage request)
+        {
+            Request = request;
+        }
+
+        public Uri Uri
+        {
+            get { return Request == null ? null : Request.RequestUri; }
+        }
+
+        public HttpRequestMessage Request { get; set; }
+        public Exception Exception {get;  set; }
+        public HttpResponseMessage Response { get; set; }
+
+    }
+
+    public class FarmRequestTimeoutException : Exception
+    {
+       
+        
+        public FarmRequestTimeoutException()
+        {
+        }
+
+        public FarmRequestTimeoutException(string message, IEnumerable<NodeRequestResult> attempts=null) : base(message)
+        {
+            Attempts = attempts != null ? attempts.ToArray() : new NodeRequestResult[0];
+        }
+
+        public FarmRequestTimeoutException(string message, Exception innerException, IEnumerable<NodeRequestResult> attempts = null)
+            : base(message, innerException)
+        {
+            Attempts = attempts != null ? attempts.ToArray() : new NodeRequestResult[0];
+        }
+
+        protected FarmRequestTimeoutException(SerializationInfo info, StreamingContext context, IEnumerable<NodeRequestResult> attempts = null)
+            : base(info, context)
+        {
+            Attempts = attempts != null ? attempts.ToArray() : new NodeRequestResult[0];
+        }
+
+        public NodeRequestResult[] Attempts { get; private set; }
+        
+    }
+
+
     public abstract class RestClientBase:IDisposable
     {
         private long m_RequestsInProgress = 0;
@@ -109,37 +158,44 @@ namespace Inceptum.Rest
             if (m_IsDisposed)
                 throw new ObjectDisposedException("");
 
+            var attempts= new List<NodeRequestResult>();
             foreach (var baseUri in m_UriPool)
             {
                 using (var host = getClient(baseUri, cultureInfo))
                 {
                     var client = host.Client;
-                    bool success = false;
+                    var success = false;
                     try
                     {
                         var request = requestFactory();
 
                         if (request == null)
                             throw new InvalidOperationException("can not send null request");
+                        if (attempts.Any(r => ReferenceEquals(request, r.Request)))
+                            throw new InvalidOperationException("requestFactory request factory should produce new HttpRequestMessage instance each time it is called");
+                        var attempt = new NodeRequestResult(request);
+                        attempts.Add(attempt);
+
                         if (request.RequestUri.IsAbsoluteUri)
                             throw new InvalidOperationException("request should have relative uri");
+
                         try
                         {
 
-                            var response = await client.SendAsync(request).ConfigureAwait(false);
-                            if (response.StatusCode <HttpStatusCode.InternalServerError)
+                            attempt.Response = await client.SendAsync(request).ConfigureAwait(false);
+                            if (attempt.Response.StatusCode < HttpStatusCode.InternalServerError)
                             {
-                                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                                var content = await attempt.Response.Content.ReadAsStringAsync().ConfigureAwait(false);
                                 success = true;
                                 return res(content);
                             }
                         }
                         catch (Exception e)
                         {
+                            attempt.Exception=e;
 #if DEBUG
                             Console.WriteLine(e.Message);
 #endif
-                            //TODO: logging
                         }
                     }
                     finally
@@ -148,9 +204,9 @@ namespace Inceptum.Rest
                     }
                 }
             }
-            var tcs = new TaskCompletionSource<TResult>();
-            tcs.SetCanceled();
-            return await tcs.Task;
+
+                
+            throw new FarmRequestTimeoutException("Failed to get valid request form nodes in pool within timeout",attempts);
         }
 
         public void Dispose()

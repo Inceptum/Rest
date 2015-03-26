@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
@@ -17,10 +18,12 @@ using NUnit.Framework;
 
 namespace Inceptum.Rest.Tests
 {
+ 
 
     public class RestClient : RestClientBase
     {
-        public RestClient(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000, long singleAddressTimeout = 60000, Func<HttpMessageHandler> handlerFactory = null)
+        public RestClient(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000,
+            long singleAddressTimeout = 60000, Func<HttpMessageHandler> handlerFactory = null)
             : base(addresses, failTimeout, farmRequestTimeout, singleAddressTimeout, handlerFactory)
         {
         }
@@ -34,6 +37,8 @@ namespace Inceptum.Rest.Tests
         {
             return GetData(relativeUri, s => s, cultureInfo);
         }
+
+   
     }
 
     public class TestController : ApiController
@@ -152,16 +157,49 @@ namespace Inceptum.Rest.Tests
         [ExpectedException(typeof(InvalidOperationException))]
         public async void RequestUriShouldBeRelativeTest()
         {
-            using (var testRestClient =new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray()))
+            using (var testRestClient =new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray(),farmRequestTimeout:200))
             {
-                for (int j = 1; j <= SERVERS_COUNT; j++)
+                for (var j = 1; j <= SERVERS_COUNT; j++)
                 {
                     TestController.FailingPorts.Add(1000+j);
                 }
-                int i = 0;
-                await testRestClient.SendAsync(() => new HttpRequestMessage(HttpMethod.Get, i++ == 0 ? new Uri("/ok", UriKind.RelativeOrAbsolute) : new Uri("http://localhost:1001/ok", UriKind.RelativeOrAbsolute)), CultureInfo.CurrentUICulture);
+                var i = 0;
+                await testRestClient.SendAsync(() => new HttpRequestMessage(HttpMethod.Get, i++ == 0 ? new Uri("/ok", UriKind.Relative) : new Uri("http://localhost:1001/ok", UriKind.RelativeOrAbsolute)), CultureInfo.CurrentUICulture);
             }
+        }      
+        
+        [Test]
+        public async void TimeoutExceptionShouldContainAllAttemptsInformationTest()
+        {
+            var cnt = 0;
+            FarmRequestTimeoutException ex=null;
+            try
+            {
+                using (var testRestClient =new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray(),farmRequestTimeout: 200))
+                {
+                    for (var j = 1; j <= SERVERS_COUNT; j++)
+                    {
+                        TestController.FailingPorts.Add(1000 + j);
+                    }
+
+                    await testRestClient.SendAsync(() =>
+                    {
+                        cnt++;
+                        return new HttpRequestMessage(HttpMethod.Get, new Uri("/ok", UriKind.Relative));
+                    }, CultureInfo.CurrentUICulture);
+
+                }
+            }
+            catch (FarmRequestTimeoutException e)
+            {
+                ex = e;
+            }
+            Assert.That(ex,Is.Not.Null);
+            Assert.That(ex.Attempts.Count(),Is.EqualTo(cnt));
+            Assert.That(ex.Attempts.Select(a => a.Response.StatusCode), Is.All.EqualTo(HttpStatusCode.InternalServerError));
         }
+
+ 
 
         [Test]
         public async void AddressesSelcetionTest()
@@ -218,19 +256,19 @@ namespace Inceptum.Rest.Tests
         }
         
         [Test]
-        public async void TaskCancelledExceptionIsTheownOnFarmRequestTimeoutReachTest()
+        public async void FarmRequestTimeoutExceptionIsThrownOnFarmRequestTimeoutReachedTest()
         {
             TestController.FailingPorts.AddRange(new []{1001,1002,1003});
             var addresses = Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray();
             using (var testRestClient = new RestClient(addresses,farmRequestTimeout:600))
             {
                 var sw = Stopwatch.StartNew();
-                TaskCanceledException ex=null;
+                FarmRequestTimeoutException ex = null;
                 try
                 {
                     await testRestClient.GetData(new Uri("/ok", UriKind.Relative), CultureInfo.CurrentUICulture);
                 }
-                catch (TaskCanceledException e)
+                catch (FarmRequestTimeoutException e)
                 {
                     ex = e;
                 }
