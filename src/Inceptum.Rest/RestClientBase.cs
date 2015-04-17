@@ -26,20 +26,21 @@ namespace Inceptum.Rest
         }
 
         public HttpRequestMessage Request { get; set; }
-        public Exception Exception {get;  set; }
+        public Exception Exception { get; set; }
         public HttpResponseMessage Response { get; set; }
 
     }
 
     public class FarmRequestTimeoutException : Exception
     {
-       
-        
+
+
         public FarmRequestTimeoutException()
         {
         }
 
-        public FarmRequestTimeoutException(string message, IEnumerable<NodeRequestResult> attempts=null) : base(message)
+        public FarmRequestTimeoutException(string message, IEnumerable<NodeRequestResult> attempts = null)
+            : base(message)
         {
             Attempts = attempts != null ? attempts.ToArray() : new NodeRequestResult[0];
         }
@@ -57,11 +58,11 @@ namespace Inceptum.Rest
         }
 
         public NodeRequestResult[] Attempts { get; private set; }
-        
+
     }
 
 
-    public abstract class RestClientBase:IDisposable
+    public abstract class RestClientBase : IDisposable
     {
         private long m_RequestsInProgress = 0;
         private bool m_IsDisposed = false;
@@ -83,7 +84,7 @@ namespace Inceptum.Rest
         /// <exception cref="System.ArgumentException">
         /// Can not be empty;addresses
         /// </exception>
-        protected RestClientBase(  string[] addresses, int failTimeout=15000,int farmRequestTimeout=120000, long singleAddressTimeout = 60000, Func<HttpMessageHandler> handlerFactory = null)
+        protected RestClientBase(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000, long singleAddressTimeout = 60000, Func<HttpMessageHandler> handlerFactory = null)
         {
             if (addresses == null) throw new ArgumentNullException("addresses");
             if (addresses.Length == 0) throw new ArgumentException("Can not be empty", "addresses");
@@ -108,7 +109,7 @@ namespace Inceptum.Rest
                 m_MessageHandler = handlerFactory;
 
 
-         
+
 
             m_Timeout = TimeSpan.FromMilliseconds(singleAddressTimeout);
 
@@ -144,23 +145,35 @@ namespace Inceptum.Rest
             client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("utf-8"));
             client.DefaultRequestHeaders.UserAgent.Clear();
             client.DefaultRequestHeaders.UserAgent.ParseAdd(m_UserAgentName);
-            client.Timeout = m_Timeout;
+            client.Timeout = m_Timeout;            
             return client;
         }
 
-
-        protected Task<TResult> GetData<TResult>(Uri relativeUri, Func<string, TResult> res, CultureInfo cultureInfo)
+        [Obsolete("This method is obsolete and is a subject to be removed. Use overload with CancellationToken instead.")]
+        protected async Task<TResult> GetData<TResult>(Uri relativeUri, Func<string, TResult> res, CultureInfo cultureInfo)
         {
-            return SendAsync(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), res, cultureInfo);
+            return await GetData(relativeUri, res, cultureInfo, CancellationToken.None);
         }
-        protected async Task<TResult> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory,Func<string, TResult> res, CultureInfo cultureInfo)
+
+        protected Task<TResult> GetData<TResult>(Uri relativeUri, Func<string, TResult> res, CultureInfo cultureInfo, CancellationToken cancellationToken)
+        {
+            return SendAsync(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), res, cultureInfo, cancellationToken);
+        }
+
+        [Obsolete("This method is obsolete and is a subject to be removed. Use overload with CancellationToken instead.")]
+        protected async Task<TResult> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, Func<string, TResult> res, CultureInfo cultureInfo)
+        {
+            return await SendAsync(requestFactory, res, cultureInfo, CancellationToken.None);
+        }
+
+        protected async Task<TResult> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, Func<string, TResult> res, CultureInfo cultureInfo, CancellationToken cancellationToken)
         {
             if (m_IsDisposed)
                 throw new ObjectDisposedException("");
 
-            var attempts= new List<NodeRequestResult>();
+            var attempts = new List<NodeRequestResult>();
             foreach (var baseUri in m_UriPool)
-            {
+            {                
                 using (var host = getClient(baseUri, cultureInfo))
                 {
                     var client = host.Client;
@@ -181,8 +194,7 @@ namespace Inceptum.Rest
 
                         try
                         {
-
-                            attempt.Response = await client.SendAsync(request).ConfigureAwait(false);
+                            attempt.Response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                             if (attempt.Response.StatusCode < HttpStatusCode.InternalServerError)
                             {
                                 var content = await attempt.Response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -190,9 +202,19 @@ namespace Inceptum.Rest
                                 return res(content);
                             }
                         }
+                        catch (OperationCanceledException e)
+                        {
+                            attempt.Exception = e;
+                            
+                            if (cancellationToken.IsCancellationRequested)
+                                throw new FarmRequestTimeoutException("Request was cancelled by consuming code", attempts);
+#if DEBUG
+                            Console.WriteLine("Timeout: " + e.Message);
+#endif 
+                        }
                         catch (Exception e)
                         {
-                            attempt.Exception=e;
+                            attempt.Exception = e;
 #if DEBUG
                             Console.WriteLine(e.Message);
 #endif
@@ -205,14 +227,13 @@ namespace Inceptum.Rest
                 }
             }
 
-                
-            throw new FarmRequestTimeoutException("Failed to get valid request form nodes in pool within timeout",attempts);
+            throw new FarmRequestTimeoutException("Failed to get valid request form nodes in pool within timeout", attempts);
         }
 
         public void Dispose()
         {
             m_IsDisposed = true;
-            while (Interlocked.Read(ref m_RequestsInProgress)>0)
+            while (Interlocked.Read(ref m_RequestsInProgress) > 0)
             {
                 Thread.Sleep(100);
             }
