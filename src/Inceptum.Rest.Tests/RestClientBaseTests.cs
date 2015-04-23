@@ -25,15 +25,15 @@ namespace Inceptum.Rest.Tests
             : base(addresses, failTimeout, farmRequestTimeout, singleAddressTimeout, handlerFactory)
         {
         }
-
-        public Task<string> SendAsync(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo, CancellationToken cancellationToken)
+        
+        public async Task<TResponse> SendAsync<TResponse>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo)
         {
-            return SendAsync(requestFactory, s => s, cultureInfo, cancellationToken);
+            return await SendAsync<TResponse>(requestFactory, cultureInfo, CancellationToken.None);
         }
 
         public Task<string> GetData(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken)
         {
-            return GetData(relativeUri, s => s, cultureInfo, cancellationToken);
+            return GetData<string>(relativeUri, cultureInfo, cancellationToken);
         }
     }
 
@@ -143,7 +143,7 @@ namespace Inceptum.Rest.Tests
                 Console.WriteLine(sw.ElapsedMilliseconds);
 
                 var ports = tasks.Select(t => t.Result).Where(t => t != null);
-                var dict = new Dictionary<string, int> { { "\"1001\"", 0 }, { "\"1002\"", 0 }, { "\"1003\"", 0 } };
+                var dict = new Dictionary<string, int> { { "1001", 0 }, { "1002", 0 }, { "1003", 0 } };
                 foreach (var port in ports)
                 {
                     dict[port]++;
@@ -168,7 +168,11 @@ namespace Inceptum.Rest.Tests
                     TestController.FailingPorts.Add(1000 + j);
                 }
                 var i = 0;
-                await testRestClient.SendAsync(() => new HttpRequestMessage(HttpMethod.Get, i++ == 0 ? new Uri("/ok", UriKind.Relative) : new Uri("http://localhost:1001/ok", UriKind.RelativeOrAbsolute)), CultureInfo.CurrentUICulture, CancellationToken.None);
+                await testRestClient.SendAsync<string>(() => 
+                    new HttpRequestMessage(HttpMethod.Get, i++ == 0 
+                        ? new Uri("/ok", UriKind.Relative) 
+                        : new Uri("http://localhost:1001/ok", UriKind.RelativeOrAbsolute)), 
+                    CultureInfo.CurrentUICulture);
             }
         }
 
@@ -186,11 +190,11 @@ namespace Inceptum.Rest.Tests
                         TestController.FailingPorts.Add(1000 + j);
                     }
 
-                    await testRestClient.SendAsync(() =>
+                    await testRestClient.SendAsync<string>(() =>
                     {
                         cnt++;
                         return new HttpRequestMessage(HttpMethod.Get, new Uri("/ok", UriKind.Relative));
-                    }, CultureInfo.CurrentUICulture, CancellationToken.None);
+                    }, CultureInfo.CurrentUICulture);
 
                 }
             }
@@ -220,7 +224,7 @@ namespace Inceptum.Rest.Tests
                 Task.WaitAll(tasks);
 
                 var ports = tasks.Select(t => t.Result).Where(t => t != null);
-                var dict = new Dictionary<string, int> { { "\"1001\"", 0 }, { "\"1002\"", 0 }, { "\"1003\"", 0 } };
+                var dict = new Dictionary<string, int> { { "1001", 0 }, { "1002", 0 }, { "1003", 0 } };
                 foreach (var port in ports)
                 {
                     dict[port]++;

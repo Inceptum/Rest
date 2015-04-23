@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -150,26 +151,23 @@ namespace Inceptum.Rest
         }
 
         [Obsolete("This method is obsolete and is a subject to be removed. Use overload with CancellationToken instead.")]
-        protected async Task<TResult> GetData<TResult>(Uri relativeUri, Func<string, TResult> res, CultureInfo cultureInfo)
+        protected async Task<TResult> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo)
         {
-            return await GetData(relativeUri, res, cultureInfo, CancellationToken.None);
+            return await GetData<TResult>(relativeUri, cultureInfo, CancellationToken.None);
         }
 
-        protected Task<TResult> GetData<TResult>(Uri relativeUri, Func<string, TResult> res, CultureInfo cultureInfo, CancellationToken cancellationToken)
+        protected Task<TResult> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken)
         {
-            return SendAsync(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), res, cultureInfo, cancellationToken);
-        }
+            return SendAsync<TResult>(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), cultureInfo, cancellationToken);
+        }        
 
-        [Obsolete("This method is obsolete and is a subject to be removed. Use overload with CancellationToken instead.")]
-        protected async Task<TResult> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, Func<string, TResult> res, CultureInfo cultureInfo)
-        {
-            return await SendAsync(requestFactory, res, cultureInfo, CancellationToken.None);
-        }
-
-        protected async Task<TResult> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, Func<string, TResult> res, CultureInfo cultureInfo, CancellationToken cancellationToken)
+        protected async Task<TResponse> SendAsync<TResponse>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
         {
             if (m_IsDisposed)
                 throw new ObjectDisposedException("");
+
+            if (formatters == null)
+                formatters = new MediaTypeFormatterCollection();
 
             var attempts = new List<NodeRequestResult>();
             foreach (var baseUri in m_UriPool)
@@ -197,9 +195,9 @@ namespace Inceptum.Rest
                             attempt.Response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                             if (attempt.Response.StatusCode < HttpStatusCode.InternalServerError)
                             {
-                                var content = await attempt.Response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                                var content = await attempt.Response.Content.ReadAsAsync<TResponse>(formatters, cancellationToken).ConfigureAwait(false);
                                 success = true;
-                                return res(content);
+                                return content;
                             }
                         }
                         catch (OperationCanceledException e)
