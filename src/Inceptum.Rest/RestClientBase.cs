@@ -156,9 +156,9 @@ namespace Inceptum.Rest
             return await GetData<TResult>(relativeUri, cultureInfo, CancellationToken.None);
         }
 
-        protected Task<TResult> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken)
+        protected Task<TResult> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
         {
-            return SendAsync<TResult>(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), cultureInfo, cancellationToken);
+            return SendAsync<TResult>(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), cultureInfo, cancellationToken, formatters);
         }        
 
         protected async Task<TResponse> SendAsync<TResponse>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
