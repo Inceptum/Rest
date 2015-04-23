@@ -26,12 +26,12 @@ namespace Inceptum.Rest.Tests
         {
         }
         
-        public async Task<TResponse> SendAsync<TResponse>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo)
+        public async Task<RestResponse<TResult>> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo)
         {
-            return await SendAsync<TResponse>(requestFactory, cultureInfo, CancellationToken.None);
+            return await SendAsync<TResult>(requestFactory, cultureInfo, CancellationToken.None);
         }
 
-        public Task<string> GetData(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken)
+        public Task<RestResponse<string>> GetData(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken)
         {
             return GetData<string>(relativeUri, cultureInfo, cancellationToken);
         }
@@ -146,7 +146,7 @@ namespace Inceptum.Rest.Tests
                 var dict = new Dictionary<string, int> { { "1001", 0 }, { "1002", 0 }, { "1003", 0 } };
                 foreach (var port in ports)
                 {
-                    dict[port]++;
+                    dict[port.Response]++;
                 }
 
                 foreach (var pair in dict.OrderBy(p => p.Key))
@@ -227,7 +227,7 @@ namespace Inceptum.Rest.Tests
                 var dict = new Dictionary<string, int> { { "1001", 0 }, { "1002", 0 }, { "1003", 0 } };
                 foreach (var port in ports)
                 {
-                    dict[port]++;
+                    dict[port.Response]++;
                 }
 
                 foreach (var pair in dict.OrderBy(p => p.Key))

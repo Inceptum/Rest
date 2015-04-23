@@ -151,17 +151,17 @@ namespace Inceptum.Rest
         }
 
         [Obsolete("This method is obsolete and is a subject to be removed. Use overload with CancellationToken instead.")]
-        protected async Task<TResult> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo)
+        protected async Task<RestResponse<TResult>> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo)
         {
             return await GetData<TResult>(relativeUri, cultureInfo, CancellationToken.None);
         }
 
-        protected Task<TResult> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
+        protected Task<RestResponse<TResult>> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
         {
             return SendAsync<TResult>(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), cultureInfo, cancellationToken, formatters);
         }        
 
-        protected async Task<TResponse> SendAsync<TResponse>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
+        protected async Task<RestResponse<TResult>> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
         {
             if (m_IsDisposed)
                 throw new ObjectDisposedException("");
@@ -195,9 +195,13 @@ namespace Inceptum.Rest
                             attempt.Response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                             if (attempt.Response.StatusCode < HttpStatusCode.InternalServerError)
                             {
-                                var content = await attempt.Response.Content.ReadAsAsync<TResponse>(formatters, cancellationToken).ConfigureAwait(false);
+                                var content = await attempt.Response.Content.ReadAsAsync<TResult>(formatters, cancellationToken).ConfigureAwait(false);
                                 success = true;
-                                return content;
+                                return new RestResponse<TResult>
+                                {
+                                    Response = content,
+                                    Headers = attempt.Response.Content.Headers
+                                };
                             }
                         }
                         catch (OperationCanceledException e)
