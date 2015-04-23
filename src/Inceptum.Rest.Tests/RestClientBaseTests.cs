@@ -120,9 +120,6 @@ namespace Inceptum.Rest.Tests
         [Test]
         public async void PerformanceTest()
         {
-
-
-
             using (var testRestClient = new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray()))
             {
                 Console.WriteLine(await testRestClient.GetData(new Uri("/ok", UriKind.Relative), CultureInfo.CurrentUICulture, CancellationToken.None));
