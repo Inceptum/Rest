@@ -57,6 +57,7 @@
     <Compile Include="PoolUri.cs" />
     <Compile Include="RestClientBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RestResponse.cs" />
     <Compile Include="UriPool.cs" />
     <Compile Include="UriPoolEnumerator.cs" />
   </ItemGroup>
