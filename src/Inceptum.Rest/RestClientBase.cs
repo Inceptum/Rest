@@ -65,6 +65,7 @@ namespace Inceptum.Rest
 
     public abstract class RestClientBase : IDisposable
     {
+        private readonly int m_DelayTimeout;
         private long m_RequestsInProgress = 0;
         private bool m_IsDisposed = false;
         private readonly string m_UserAgentName;
@@ -80,13 +81,14 @@ namespace Inceptum.Rest
         /// <param name="failTimeout">Timeoute address should be excluded from pool after rquest to the address fails (may be violated if all addresses in pool are excluded).</param>
         /// <param name="farmRequestTimeout">The farm request timeout. During this timeout <see cref="RestClientBase"/> will reuqest addresses in the pool till gets valid response (HTTP status >=500)</param>
         /// <param name="singleAddressTimeout">The single address timeout.</param>
+        /// <param name="delayTimeout">The delay between fail requests (when all addresses are excluded from pool)</param>
         /// <param name="handlerFactory">The handler factory.</param>
         /// <exception cref="System.ArgumentNullException">addresses</exception>
         /// <exception cref="System.ArgumentException">
         /// Can not be empty;addresses
         /// </exception>
-        protected RestClientBase(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000, long singleAddressTimeout = 60000, Func<HttpMessageHandler> handlerFactory = null)
-        {
+        protected RestClientBase(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000, long singleAddressTimeout = 60000, int delayTimeout = 5000, Func<HttpMessageHandler> handlerFactory = null)
+        {            
             if (addresses == null) throw new ArgumentNullException("addresses");
             if (addresses.Length == 0) throw new ArgumentException("Can not be empty", "addresses");
             var addressesList = new List<Uri>();
@@ -113,6 +115,7 @@ namespace Inceptum.Rest
 
 
             m_Timeout = TimeSpan.FromMilliseconds(singleAddressTimeout);
+            m_DelayTimeout = delayTimeout;
 
             m_UserAgentName = GetType().Name + "-" + GetType().Assembly.GetName().Version;
         }
@@ -171,8 +174,11 @@ namespace Inceptum.Rest
 
             var attempts = new List<NodeRequestResult>();
             foreach (var baseUri in m_UriPool)
-            {                
-                using (var host = getClient(baseUri, cultureInfo))
+            {
+                if (!baseUri.IsValid)
+                    await Task.Delay(m_DelayTimeout);
+
+                using (var host = getClient(baseUri.Uri, cultureInfo))
                 {
                     var client = host.Client;
                     var success = false;
@@ -224,7 +230,7 @@ namespace Inceptum.Rest
                     }
                     finally
                     {
-                        m_UriPool.ReportAttempt(baseUri, success);
+                        m_UriPool.ReportAttempt(baseUri.Uri, success);
                     }
                 }
             }

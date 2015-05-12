@@ -7,7 +7,7 @@ using System.Runtime.CompilerServices;
 
 namespace Inceptum.Rest
 {
-    class UriPool : IEnumerable<Uri>
+    class UriPool : IEnumerable<PoolUri>
     {
         private readonly Stopwatch m_Stopwatch = Stopwatch.StartNew();
       
@@ -30,7 +30,7 @@ namespace Inceptum.Rest
         }
 
 
-        public IEnumerator<Uri> GetEnumerator()
+        public IEnumerator<PoolUri> GetEnumerator()
         {
             return new UriPoolEnumerator(this, m_Timeout);
         }
@@ -48,10 +48,10 @@ namespace Inceptum.Rest
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        internal Uri GetUri()
+        internal PoolUri GetUri()
         {
             var length = Uris.Length;
-            if (length == 1) return Uris.First().Uri;
+            if (length == 1) return Uris.First();
 
             var now = m_Stopwatch.ElapsedMilliseconds;
 
@@ -63,7 +63,7 @@ namespace Inceptum.Rest
             {
                 toBeTested.IsBeingTested = true;
                 toBeTested.LastAttemptStart = m_Stopwatch.ElapsedMilliseconds;
-                return toBeTested.Uri;
+                return toBeTested;
             }
 
             //Then use valid random  addresses in order
@@ -72,7 +72,7 @@ namespace Inceptum.Rest
             if (validUri!=null)
             {
                 validUri.LastAttemptStart = m_Stopwatch.ElapsedMilliseconds;
-                return validUri.Uri;
+                return validUri;
             }
 
 
@@ -87,7 +87,7 @@ namespace Inceptum.Rest
 
             invalidUri.IsBeingTested = true;
             invalidUri.LastAttemptStart = m_Stopwatch.ElapsedMilliseconds;
-            return invalidUri.Uri;
+            return invalidUri;
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]

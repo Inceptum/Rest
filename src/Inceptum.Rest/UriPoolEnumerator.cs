@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Inceptum.Rest
 {
-    class UriPoolEnumerator : IEnumerator<Uri>
+    class UriPoolEnumerator : IEnumerator<PoolUri>
     {
         private readonly UriPool m_Pool;
         private readonly Stopwatch m_Stopwatch=new Stopwatch();
@@ -31,7 +31,7 @@ namespace Inceptum.Rest
             m_Start = m_Stopwatch.ElapsedMilliseconds;
         }
 
-        public Uri Current
+        public PoolUri Current
         {
             get
             {

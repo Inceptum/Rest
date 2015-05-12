@@ -21,8 +21,8 @@ namespace Inceptum.Rest.Tests
     public class RestClient : RestClientBase
     {
         public RestClient(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000,
-            long singleAddressTimeout = 60000, Func<HttpMessageHandler> handlerFactory = null)
-            : base(addresses, failTimeout, farmRequestTimeout, singleAddressTimeout, handlerFactory)
+            long singleAddressTimeout = 60000, int delayTimeout = 5000, Func<HttpMessageHandler> handlerFactory = null)
+            : base(addresses, failTimeout, farmRequestTimeout, singleAddressTimeout, delayTimeout, handlerFactory)
         {
         }
         
@@ -120,7 +120,7 @@ namespace Inceptum.Rest.Tests
         [Test]
         public async void PerformanceTest()
         {
-            using (var testRestClient = new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray()))
+            using (var testRestClient = new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray(), delayTimeout: 0))
             {
                 Console.WriteLine(await testRestClient.GetData(new Uri("/ok", UriKind.Relative), CultureInfo.CurrentUICulture, CancellationToken.None));
 
@@ -158,7 +158,7 @@ namespace Inceptum.Rest.Tests
         [ExpectedException(typeof(InvalidOperationException))]
         public async void RequestUriShouldBeRelativeTest()
         {
-            using (var testRestClient = new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray(), farmRequestTimeout: 200))
+            using (var testRestClient = new RestClient(Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray(), farmRequestTimeout: 200, delayTimeout: 1))
             {
                 for (var j = 1; j <= SERVERS_COUNT; j++)
                 {
@@ -240,7 +240,7 @@ namespace Inceptum.Rest.Tests
         {
             TestController.FailingPorts.AddRange(new[] { 1001, 1002, 1003 });
             var addresses = Enumerable.Range(1, SERVERS_COUNT).Select(i => "http://localhost:" + (1000 + i)).ToArray();
-            using (var testRestClient = new RestClient(addresses, farmRequestTimeout: 1500))
+            using (var testRestClient = new RestClient(addresses, farmRequestTimeout: 1500, delayTimeout: 1))
             {
                 var e = new ManualResetEvent(false);
                 ThreadPool.QueueUserWorkItem(state =>

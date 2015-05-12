@@ -49,8 +49,8 @@ namespace Inceptum.Rest.Tests
             while (!gotFailedUri && sw.ElapsedMilliseconds < 400)
             {
                 var received = pool.GetUri();
-                gotFailedUri = received == uri;
-                pool.ReportAttempt(received,true);
+                gotFailedUri = received.Uri == uri;
+                pool.ReportAttempt(received.Uri,true);
                 Thread.Sleep(10);
             }
             sw.Stop();
@@ -71,15 +71,15 @@ namespace Inceptum.Rest.Tests
             foreach (var u in pool.Take(10)) 
             {
                 if(uri==null)
-                    uri = u;
-                pool.ReportAttempt(u,false); 
+                    uri = u.Uri;
+                pool.ReportAttempt(u.Uri,false); 
                 Thread.Sleep(10);
             }
-            Assert.That(pool.First(), Is.EqualTo(uri), "Inavlid uri that was used maximum tiem ago was not returned");
+            Assert.That(pool.First().Uri, Is.EqualTo(uri), "Inavlid uri that was used maximum tiem ago was not returned");
             Console.WriteLine(uri);
 
 
-            var dict = new Dictionary<Uri, int>();
+            var dict = new Dictionary<PoolUri, int>();
             foreach (var u in pool.Take(100000))
             {
                 if (!dict.ContainsKey(u))
@@ -118,22 +118,22 @@ namespace Inceptum.Rest.Tests
                 pool.ReportAttempt(u, u != uri); 
             }
             Thread.Sleep(250);
-            Assert.That(pool.First(),Is.EqualTo(uri),"Inavlid uri that has been tested more then failedtimout ms ago was not returned first");
-            Assert.That(pool.Take(1000),Is.All.Not.EqualTo(uri),"Uri beig tested was returned before first attempt to use it finished");
+            Assert.That(pool.First().Uri,Is.EqualTo(uri),"Inavlid uri that has been tested more then failedtimout ms ago was not returned first");
+            Assert.That(pool.Take(1000).Select(u => u.Uri),Is.All.Not.EqualTo(uri),"Uri beig tested was returned before first attempt to use it finished");
         }
 
         [Test]
         public void UriDistributionIsRegularTest()
         {
             var pool = new UriPool(60000, 100000, Enumerable.Range(1, 10).Select(i => new Uri("http://localhost:" + (1000 + i))).ToArray());
-            var dict = new Dictionary<Uri, int> ();
+            var dict = new Dictionary<PoolUri, int> ();
          
             foreach (var uri in pool.Take(100000))
             {
                 if (!dict.ContainsKey(uri))
                     dict[uri] = 0;
                 dict[uri]++;
-                pool.ReportAttempt(uri,true);
+                pool.ReportAttempt(uri.Uri,true);
             }
             foreach (var pair in dict)
             {
