@@ -206,7 +206,9 @@ namespace Inceptum.Rest
                                 return new RestResponse<TResult>
                                 {
                                     Response = content,
-                                    Headers = attempt.Response.Content.Headers
+                                    Headers = attempt.Response.Content.Headers,
+                                    StatusCode= attempt.Response.StatusCode,
+                                    RawResponse = attempt.Response
                                 };
                             }
                         }
