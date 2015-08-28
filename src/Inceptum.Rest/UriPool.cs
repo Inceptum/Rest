@@ -20,15 +20,16 @@ namespace Inceptum.Rest
         {
             if(addresses.Length==0)
                 throw new ArgumentException("addresses should contain at least 1 uri");
+
             m_Timeout = timeout;
             m_FailTimeout = failTimeout;
             Uris= addresses.Select(s => new PoolUri(s)
             {
+                IsValid = true,
                 LastAttemptFinish = -failTimeout*10-random(1000),
                 LastAttemptStart = -failTimeout*10-random(1000)
             }).ToArray();
         }
-
 
         public IEnumerator<PoolUri> GetEnumerator()
         {

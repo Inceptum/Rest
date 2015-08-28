@@ -66,8 +66,8 @@ namespace Inceptum.Rest
     public abstract class RestClientBase : IDisposable
     {
         private readonly int m_DelayTimeout;
-        private long m_RequestsInProgress = 0;
-        private bool m_IsDisposed = false;
+        private long m_RequestsInProgress;
+        private bool m_IsDisposed;
         private readonly string m_UserAgentName;
         private readonly TimeSpan m_Timeout;
         private readonly ConcurrentDictionary<Tuple<Uri, CultureInfo>, ConcurrentQueue<HttpClient>> m_ClientsCache = new ConcurrentDictionary<Tuple<Uri, CultureInfo>, ConcurrentQueue<HttpClient>>();
@@ -91,6 +91,12 @@ namespace Inceptum.Rest
         {            
             if (addresses == null) throw new ArgumentNullException("addresses");
             if (addresses.Length == 0) throw new ArgumentException("Can not be empty", "addresses");
+
+            validateIsGreaterThan(0, failTimeout, "failTimeout");
+            validateIsGreaterThan(0, farmRequestTimeout, "farmRequestTimeout");
+            validateIsGreaterThan(0, singleAddressTimeout, "singleAddressTimeout");
+            validateIsGreaterThan(-1, delayTimeout, "delayTimeout");
+
             var addressesList = new List<Uri>();
             foreach (var address in addresses)
             {
@@ -99,7 +105,6 @@ namespace Inceptum.Rest
 
                 if (!Uri.IsWellFormedUriString(address, UriKind.Absolute))
                     throw new ArgumentException(string.Format("addresses must be valid absolute uri but one was '{0}", address));
-
 
                 addressesList.Add(new Uri(address, UriKind.Absolute));
             }
@@ -111,13 +116,18 @@ namespace Inceptum.Rest
             else
                 m_MessageHandler = handlerFactory;
 
-
-
-
             m_Timeout = TimeSpan.FromMilliseconds(singleAddressTimeout);
             m_DelayTimeout = delayTimeout;
 
             m_UserAgentName = GetType().Name + "-" + GetType().Assembly.GetName().Version;
+        }
+
+        static void validateIsGreaterThan(long max, long value, string paramName)
+        {
+            if (value <= max)
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, string.Format("{0} must be greater than {1}", paramName, max));
+            }
         }
 
         private HttpClientHost getClient(Uri baseUri, CultureInfo cultureInfo)

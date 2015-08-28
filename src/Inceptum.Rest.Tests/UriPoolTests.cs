@@ -10,7 +10,6 @@ namespace Inceptum.Rest.Tests
     [TestFixture]
     public class UriPoolTests
     {
-
         [Test]
         public void UrisPoolEnumeratorExitsAfterTimeoutTest()
         {
@@ -26,11 +25,11 @@ namespace Inceptum.Rest.Tests
         }
 
         [Test]
-        public void AllUrisInPoolAreInitiallyInvalidTest()
+        public void AllUrisInPoolAreInitiallyValidTest()
         {
-            var pool = new UriPool(200,100000, Enumerable.Range(1, 10).Select(i => new Uri("http://localhost:" + (1000 + i))).ToArray());
-            Assert.That(pool.Uris.Select(uri => uri.IsValid),Is.All.False,"Some uri were marked as valid before first request");
-            Assert.That(pool.Uris.Select(uri => uri.IsBeingTested),Is.All.False,"Some uri were marked as being tested before first request");
+            var pool = new UriPool(200, 100000, Enumerable.Range(1, 10).Select(i => new Uri("http://localhost:" + (1000 + i))).ToArray());
+            Assert.That(pool.Uris.Select(uri => uri.IsValid), Is.All.True, "Some uri were marked as invalid before first request");
+            Assert.That(pool.Uris.Select(uri => uri.IsBeingTested), Is.All.False, "Some uri were marked as being tested before first request");
         }
 
         [Test]

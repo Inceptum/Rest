@@ -16,8 +16,6 @@ using NUnit.Framework;
 
 namespace Inceptum.Rest.Tests
 {
-
-
     public class RestClient : RestClientBase
     {
         public RestClient(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000,
