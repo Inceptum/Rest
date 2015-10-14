@@ -200,7 +200,6 @@ namespace Inceptum.Rest
                             throw new InvalidOperationException("can not send null request");
                         if (attempts.Any(r => ReferenceEquals(request, r.Request)))
                             throw new InvalidOperationException("requestFactory request factory should produce new HttpRequestMessage instance each time it is called");
-                        request.Headers.Host = baseUri.Uri.Host;
                         var attempt = new NodeRequestResult(request);
                         attempts.Add(attempt);
 
