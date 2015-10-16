@@ -211,11 +211,16 @@ namespace Inceptum.Rest
                             attempt.Response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                             if (attempt.Response.StatusCode < HttpStatusCode.InternalServerError)
                             {
-                                TResult content;
+                                var content = default(TResult);
                                 if (attempt.Response.Content != null && attempt.Response.Content.Headers.ContentLength > 0)
-                                    content = await attempt.Response.Content.ReadAsAsync<TResult>(formatters, cancellationToken).ConfigureAwait(false);
-                                else
-                                    content = default(TResult);
+                                    try
+                                    {
+                                        content = await attempt.Response.Content.ReadAsAsync<TResult>(formatters, cancellationToken).ConfigureAwait(false);
+                                    }
+                                    catch
+                                    {
+                                        /* If response can't be deserialized to TResult, it mean's that error ocuured, and caller should decide what to do */
+                                    }
                                 success = true;
                                 return new RestResponse<TResult>
                                 {
