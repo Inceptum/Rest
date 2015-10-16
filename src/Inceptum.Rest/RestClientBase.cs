@@ -88,7 +88,7 @@ namespace Inceptum.Rest
         /// Can not be empty;addresses
         /// </exception>
         protected RestClientBase(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000, long singleAddressTimeout = 60000, int delayTimeout = 5000, Func<HttpMessageHandler> handlerFactory = null)
-        {            
+        {
             if (addresses == null) throw new ArgumentNullException("addresses");
             if (addresses.Length == 0) throw new ArgumentException("Can not be empty", "addresses");
 
@@ -159,7 +159,7 @@ namespace Inceptum.Rest
             client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("utf-8"));
             client.DefaultRequestHeaders.UserAgent.Clear();
             client.DefaultRequestHeaders.UserAgent.ParseAdd(m_UserAgentName);
-            client.Timeout = m_Timeout;            
+            client.Timeout = m_Timeout;
             return client;
         }
 
@@ -172,7 +172,7 @@ namespace Inceptum.Rest
         protected Task<RestResponse<TResult>> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
         {
             return SendAsync<TResult>(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), cultureInfo, cancellationToken, formatters);
-        }        
+        }
 
         protected async Task<RestResponse<TResult>> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
         {
@@ -211,13 +211,17 @@ namespace Inceptum.Rest
                             attempt.Response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                             if (attempt.Response.StatusCode < HttpStatusCode.InternalServerError)
                             {
-                                var content = await attempt.Response.Content.ReadAsAsync<TResult>(formatters, cancellationToken).ConfigureAwait(false);
+                                TResult content;
+                                if (attempt.Response.Content != null && attempt.Response.Content.Headers.ContentLength > 0)
+                                    content = await attempt.Response.Content.ReadAsAsync<TResult>(formatters, cancellationToken).ConfigureAwait(false);
+                                else
+                                    content = default(TResult);
                                 success = true;
                                 return new RestResponse<TResult>
                                 {
                                     Response = content,
                                     Headers = attempt.Response.Content.Headers,
-                                    StatusCode= attempt.Response.StatusCode,
+                                    StatusCode = attempt.Response.StatusCode,
                                     RawResponse = attempt.Response
                                 };
                             }
@@ -225,7 +229,7 @@ namespace Inceptum.Rest
                         catch (OperationCanceledException e)
                         {
                             attempt.Exception = e;
-                            
+
                             if (cancellationToken.IsCancellationRequested)
                                 throw new FarmRequestTimeoutException("Request was cancelled by consuming code", attempts);
 #if DEBUG
