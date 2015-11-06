@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -179,14 +179,14 @@ namespace Inceptum.Rest
             if (m_IsDisposed)
                 throw new ObjectDisposedException("");
 
-            if (formatters == null)
-                formatters = new MediaTypeFormatterCollection();
+            var mediaTypeFormatters = formatters == null ? new MediaTypeFormatterCollection().ToArray() : formatters.ToArray();
+
 
             var attempts = new List<NodeRequestResult>();
             foreach (var baseUri in m_UriPool)
             {
                 if (!baseUri.IsValid)
-                    await Task.Delay(m_DelayTimeout);
+                    await Task.Delay(m_DelayTimeout, cancellationToken);
 
                 using (var host = getClient(baseUri.Uri, cultureInfo))
                 {
@@ -213,14 +213,16 @@ namespace Inceptum.Rest
                             {
                                 var content = default(TResult);
                                 if (attempt.Response.Content != null && attempt.Response.Content.Headers.ContentLength > 0)
+                                {
                                     try
                                     {
-                                        content = await attempt.Response.Content.ReadAsAsync<TResult>(formatters, cancellationToken).ConfigureAwait(false);
+                                        content = await attempt.Response.Content.ReadAsAsync<TResult>(mediaTypeFormatters, cancellationToken).ConfigureAwait(false);
                                     }
-                                    catch
+                                    catch (Exception e)
                                     {
-                                        /* If response can't be deserialized to TResult, it mean's that error ocuured, and caller should decide what to do */
+                                        /* If response can't be deserialized to TResult, it mean's that error occured, and caller should decide what to do */
                                     }
+                                }
                                 success = true;
                                 return new RestResponse<TResult>
                                 {
