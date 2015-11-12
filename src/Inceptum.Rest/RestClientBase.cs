@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -166,9 +167,10 @@ namespace Inceptum.Rest
                                     {
                                         content = await attempt.Response.Content.ReadAsAsync<TResult>(mediaTypeFormatters, cancellationToken).ConfigureAwait(false);
                                     }
-                                    catch (Exception e)
+                                    catch(Exception e)
                                     {
                                         /* If response can't be deserialized to TResult, it mean's that error occured, and caller should decide what to do */
+                                        writeLine(e.Message);
                                     }
                                 }
                                 success = true;
@@ -184,19 +186,17 @@ namespace Inceptum.Rest
                         catch (OperationCanceledException e)
                         {
                             attempt.Exception = e;
-
                             if (cancellationToken.IsCancellationRequested)
-                                throw new FarmRequestTimeoutException("Request was cancelled by consuming code", attempts);
-#if DEBUG
-                            Console.WriteLine("Timeout: " + e.Message);
-#endif 
+                            {
+                                success = true;
+                                throw new FarmRequestTimeoutException("Request was cancelled by consuming code", e, attempts);
+                            }
+                            writeLine("Timeout: " + e.Message);
                         }
                         catch (Exception e)
                         {
                             attempt.Exception = e;
-#if DEBUG
-                            Console.WriteLine(e.Message);
-#endif
+                            writeLine(e.Message);
                         }
                     }
                     finally
@@ -225,6 +225,12 @@ namespace Inceptum.Rest
                 }
             }
             m_ClientsCache.Clear();
+        }
+
+        [Conditional("DEBUG")]
+        static void writeLine(string message)
+        {
+            Console.WriteLine(message);
         }
     }
 }

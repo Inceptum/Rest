@@ -88,7 +88,6 @@ namespace Inceptum.Rest.Tests
                     return r;
                 }).ToArray());
             Console.WriteLine("==============================================");
-
         }
 
         [TearDown]
@@ -113,7 +112,6 @@ namespace Inceptum.Rest.Tests
 
             return config;
         }
-
 
         [Test]
         public async void PerformanceTest()
@@ -150,7 +148,6 @@ namespace Inceptum.Rest.Tests
                 }
             }
         }
-
 
         [Test]
         [ExpectedException(typeof(InvalidOperationException))]
@@ -232,7 +229,6 @@ namespace Inceptum.Rest.Tests
             }
         }
 
-
         [Test]
         public async void RequestTillTimeoutEndsTest()
         {
@@ -300,6 +296,33 @@ namespace Inceptum.Rest.Tests
 
                 Assert.IsNotNull(expectedException);
                 Assert.AreEqual("Request was cancelled by consuming code", expectedException.Message);
+            }
+        }
+
+        [Test]
+        [Timeout(10 * 1000)]
+        public async void ShouldNotFailUrlIfConsumingCodeRequestedCancellation()
+        {
+            var addresses = new[] {"http://localhost:1001"};
+
+            using (var testRestClient = new RestClient(addresses, singleAddressTimeout: 1000 * 60, delayTimeout: 1000 * 1000))
+            {
+                var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(1000 * 3));
+
+                Exception expectedException = null;
+                try
+                {
+                    await testRestClient.GetData(new Uri("/delay?seconds=15", UriKind.Relative), CultureInfo.CurrentUICulture, cancellationTokenSource.Token).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    expectedException = e;
+                }
+
+                Assert.IsNotNull(expectedException);
+                Assert.IsTrue(expectedException.InnerException is OperationCanceledException);
+
+                await testRestClient.GetData(new Uri("/delay?seconds=1", UriKind.Relative), CultureInfo.CurrentUICulture, CancellationToken.None).ConfigureAwait(false);
             }
         }
     }
