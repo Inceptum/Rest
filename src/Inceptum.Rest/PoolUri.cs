@@ -9,7 +9,7 @@ namespace Inceptum.Rest
         public PoolUri(Uri uri)
         {
             Uri = uri;
-            IsValid = false;
+            IsValid = true;
             LastAttemptFinish = 0;
         }
 
