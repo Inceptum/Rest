@@ -53,7 +53,9 @@
     <Compile Include="..\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
     </Compile>
+    <Compile Include="FarmRequestTimeoutException.cs" />
     <Compile Include="HttpClientHost.cs" />
+    <Compile Include="NodeRequestResult.cs" />
     <Compile Include="PoolUri.cs" />
     <Compile Include="RestClientBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

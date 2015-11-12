@@ -7,62 +7,11 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
-using System.Reflection;
-using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Inceptum.Rest
 {
-    public class NodeRequestResult
-    {
-        public NodeRequestResult(HttpRequestMessage request)
-        {
-            Request = request;
-        }
-
-        public Uri Uri
-        {
-            get { return Request == null ? null : Request.RequestUri; }
-        }
-
-        public HttpRequestMessage Request { get; set; }
-        public Exception Exception { get; set; }
-        public HttpResponseMessage Response { get; set; }
-
-    }
-
-    public class FarmRequestTimeoutException : Exception
-    {
-
-
-        public FarmRequestTimeoutException()
-        {
-        }
-
-        public FarmRequestTimeoutException(string message, IEnumerable<NodeRequestResult> attempts = null)
-            : base(message)
-        {
-            Attempts = attempts != null ? attempts.ToArray() : new NodeRequestResult[0];
-        }
-
-        public FarmRequestTimeoutException(string message, Exception innerException, IEnumerable<NodeRequestResult> attempts = null)
-            : base(message, innerException)
-        {
-            Attempts = attempts != null ? attempts.ToArray() : new NodeRequestResult[0];
-        }
-
-        protected FarmRequestTimeoutException(SerializationInfo info, StreamingContext context, IEnumerable<NodeRequestResult> attempts = null)
-            : base(info, context)
-        {
-            Attempts = attempts != null ? attempts.ToArray() : new NodeRequestResult[0];
-        }
-
-        public NodeRequestResult[] Attempts { get; private set; }
-
-    }
-
-
     public abstract class RestClientBase : IDisposable
     {
         private readonly int m_DelayTimeout;
@@ -149,7 +98,6 @@ namespace Inceptum.Rest
             });
 
         }
-
 
         protected virtual HttpClient CreateClient(Uri baseUri, CultureInfo cultureInfo)
         {
