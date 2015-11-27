@@ -112,13 +112,7 @@ namespace Inceptum.Rest
             return client;
         }
 
-        [Obsolete("This method is obsolete and is a subject to be removed. Use overload with CancellationToken instead.")]
-        protected async Task<RestResponse<TResult>> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo)
-        {
-            return await GetData<TResult>(relativeUri, cultureInfo, CancellationToken.None);
-        }
-
-        protected Task<RestResponse<TResult>> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
+        protected Task<RestResponse<TResult>> GetData<TResult>(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken = default(CancellationToken), IEnumerable<MediaTypeFormatter> formatters = null)
         {
             return SendAsync<TResult>(() => new HttpRequestMessage(HttpMethod.Get, relativeUri), cultureInfo, cancellationToken, formatters);
         }

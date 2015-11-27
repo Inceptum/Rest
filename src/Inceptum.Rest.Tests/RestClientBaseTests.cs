@@ -23,7 +23,7 @@ namespace Inceptum.Rest.Tests
             : base(addresses, failTimeout, farmRequestTimeout, singleAddressTimeout, delayTimeout, handlerFactory)
         {
         }
-        
+
         public async Task<RestResponse<TResult>> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo)
         {
             return await SendAsync<TResult>(requestFactory, cultureInfo, CancellationToken.None);
@@ -160,10 +160,10 @@ namespace Inceptum.Rest.Tests
                     TestController.FailingPorts.Add(1000 + j);
                 }
                 var i = 0;
-                await testRestClient.SendAsync<string>(() => 
-                    new HttpRequestMessage(HttpMethod.Get, i++ == 0 
-                        ? new Uri("/ok", UriKind.Relative) 
-                        : new Uri("http://localhost:1001/ok", UriKind.RelativeOrAbsolute)), 
+                await testRestClient.SendAsync<string>(() =>
+                    new HttpRequestMessage(HttpMethod.Get, i++ == 0
+                        ? new Uri("/ok", UriKind.Relative)
+                        : new Uri("http://localhost:1001/ok", UriKind.RelativeOrAbsolute)),
                     CultureInfo.CurrentUICulture);
             }
         }
@@ -303,7 +303,7 @@ namespace Inceptum.Rest.Tests
         [Timeout(10 * 1000)]
         public async void ShouldNotFailUrlIfConsumingCodeRequestedCancellation()
         {
-            var addresses = new[] {"http://localhost:1001"};
+            var addresses = new[] { "http://localhost:1001" };
 
             using (var testRestClient = new RestClient(addresses, singleAddressTimeout: 1000 * 60, delayTimeout: 1000 * 1000))
             {

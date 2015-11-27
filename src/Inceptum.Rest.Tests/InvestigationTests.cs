@@ -8,10 +8,10 @@ using NUnit.Framework;
 
 namespace Inceptum.Rest.Tests
 {
-    [TestFixture,Ignore]
+    [TestFixture]
     public class InvestigationTests
     {
-        [Test]
+        [Test, Ignore]
         public void RandomStrategyTest()
         {
             var dictionary1 = new Dictionary<int, int>();
@@ -67,7 +67,7 @@ namespace Inceptum.Rest.Tests
             }*/
         }
 
-        [Test]
+        [Test, Ignore]
         public void StopwatchTest()
         {
             Stopwatch sw=Stopwatch.StartNew();
@@ -76,6 +76,13 @@ namespace Inceptum.Rest.Tests
                 Thread.Sleep(1000);
                 Console.WriteLine("{0}\t\t{1}",sw.ElapsedMilliseconds,DateTime.Now);
             }
+        }
+
+        [Test]
+        public void DefaultCancellationTokenIsTheNoneOneTest()
+        {
+            Assert.IsTrue(default(CancellationToken) == CancellationToken.None);
+            Assert.AreEqual(default(CancellationToken), CancellationToken.None);
         }
     }
 }
