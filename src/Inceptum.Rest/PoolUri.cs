@@ -3,7 +3,6 @@ using System.Diagnostics;
 
 namespace Inceptum.Rest
 {
-    [DebuggerDisplay("Address = {Uri} LastAttemptStart={LastAttemptStart} LastAttemptFinish={LastAttemptFinish} IsBeingTested={IsBeingTested} IsValid={IsValid}")]
     class PoolUri
     {
         public PoolUri(Uri uri)
@@ -18,5 +17,16 @@ namespace Inceptum.Rest
         public long LastAttemptStart { get; set; }
         public bool IsBeingTested { get; set; }
         public bool IsValid { get; set; }
+
+
+        public override string ToString()
+        {
+            return string.Format(@"Address = {0} IsValid={4}",
+                Uri,
+                LastAttemptStart > 0 ? TimeSpan.FromMilliseconds(LastAttemptStart).ToString() : "never",
+                LastAttemptFinish >= LastAttemptStart ? TimeSpan.FromMilliseconds(LastAttemptFinish).ToString() : "not finished",
+                IsBeingTested, IsValid
+                );
+        }
     }
 }

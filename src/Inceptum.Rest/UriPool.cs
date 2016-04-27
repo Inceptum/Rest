@@ -11,8 +11,8 @@ namespace Inceptum.Rest
     class UriPool : IEnumerable<PoolUri>
     {
         private readonly Stopwatch m_Stopwatch = Stopwatch.StartNew();
-        private readonly long m_FailTimeout;
-        private readonly long m_PoolEnumerationTimeout;
+        public long FailTimeout { get; private set; }
+        public long PoolEnumerationTimeout { get; private set; }
         internal PoolUri[] Uris { get; private set; }
 
         public UriPool(long failTimeout, long poolEnumerationTimeout, params Uri[] addresses)
@@ -20,8 +20,8 @@ namespace Inceptum.Rest
             if (addresses == null || addresses.Length == 0)
                 throw new ArgumentException("addresses should contain at least 1 uri");
 
-            m_PoolEnumerationTimeout = poolEnumerationTimeout;
-            m_FailTimeout = failTimeout;
+            PoolEnumerationTimeout = poolEnumerationTimeout;
+            FailTimeout = failTimeout;
             Uris = addresses.Select(s => new PoolUri(s)
             {
                 IsValid = true,
@@ -32,7 +32,7 @@ namespace Inceptum.Rest
 
         public IEnumerator<PoolUri> GetEnumerator()
         {
-            return new UriPoolEnumerator(this, m_PoolEnumerationTimeout);
+            return new UriPoolEnumerator(this, PoolEnumerationTimeout);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -61,7 +61,7 @@ namespace Inceptum.Rest
 
             //Return address to be tested with oldest last attempt time. (If there is one)
             var toBeTested = Uris.OrderBy(a => a.LastAttemptFinish)
-                .FirstOrDefault(a => !a.IsValid && now - a.LastAttemptFinish > m_FailTimeout && !a.IsBeingTested);
+                .FirstOrDefault(a => !a.IsValid && now - a.LastAttemptFinish > FailTimeout && !a.IsBeingTested);
 
             if (toBeTested != null)
             {

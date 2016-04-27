@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,10 +29,10 @@ namespace Inceptum.Rest
         /// Initializes a new instance of the <see cref="RestClientBase"/> class.
         /// </summary>
         /// <param name="addresses">The addresses pool.</param>
-        /// <param name="failTimeout">Timeoute address should be excluded from pool after rquest to the address fails (may be violated if all addresses in pool are excluded).</param>
+        /// <param name="failTimeout">Timeout address should be excluded from pool after rquest to the address fails (may be violated if all addresses in pool are excluded).</param>
         /// <param name="farmRequestTimeout">The farm request timeout. During this timeout <see cref="RestClientBase"/> will reuqest addresses in the pool till gets valid response (HTTP status >=500)</param>
         /// <param name="singleAddressTimeout">The single address timeout.</param>
-        /// <param name="delayTimeout">The delay between fail requests (when all addresses are excluded from pool)</param>
+        /// <param name="delayTimeout">The delay before retring after all addresses has failed and are excluded from pool</param>
         /// <param name="handlerFactory">The handler factory.</param>
         /// <exception cref="System.ArgumentNullException">addresses</exception>
         /// <exception cref="System.ArgumentException">
@@ -200,7 +201,43 @@ namespace Inceptum.Rest
                 }
             }
 
-            throw new FarmRequestTimeoutException("Failed to get valid request form nodes in pool within timeout", attempts);
+            var sb = new StringBuilder();
+            sb.AppendFormat("Failed to get valid request form nodes in pool within {0} timeout ",m_Timeout)
+                .AppendLine()
+                .AppendFormat("Pool state:", string.Join(", ", m_UriPool.Select(u => u.Uri)));
+            foreach (var address in m_UriPool.Uris)
+            {
+                sb.AppendLine().AppendFormat("\t{0}", address);
+            }
+            sb
+                .AppendLine()
+                .AppendFormat("FailTimeout (Timeout address should be excluded from pool after rquest to the address fails): {0}ms", m_UriPool.FailTimeout)
+                .AppendLine()
+                .AppendFormat("FarmRequestTimeout (The farm request timeout): {0}ms", m_UriPool.PoolEnumerationTimeout)
+                .AppendLine()
+                .AppendFormat("DelayTimeout (The delay before retring after all addresses has failed and are excluded from pool): {0}ms", m_DelayTimeout)
+                .AppendLine();
+            var lastAttempt = attempts.LastOrDefault();
+            if (lastAttempt != null)
+            {
+                sb
+                    .AppendFormat("Last attempt:")
+                    .AppendLine()
+                    .AppendFormat("\tUri:  {0}", lastAttempt.Uri)
+                    .AppendLine()
+                    .AppendFormat("\tRequest:  {0}", lastAttempt.Request.ToString().Replace("\n",   Environment.NewLine + "\t\t"))
+                    .AppendLine()
+                    .AppendFormat("\tResponse:  {0}", lastAttempt.Response.ToString().Replace(Environment.NewLine,  Environment.NewLine + "\t\t"));
+                if (lastAttempt.Exception != null)
+                {
+                    sb
+                        .AppendLine()
+                        .AppendFormat("\tException:  {0}", lastAttempt.Exception.ToString().Replace(Environment.NewLine,  Environment.NewLine+ "\t\t"));
+                }
+            }
+
+           
+            throw new FarmRequestTimeoutException(sb.ToString(), attempts);
         }
 
         public void Dispose()

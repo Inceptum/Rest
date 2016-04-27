@@ -197,6 +197,7 @@ namespace Inceptum.Rest.Tests
             Assert.That(ex, Is.Not.Null);
             Assert.That(ex.Attempts.Count(), Is.EqualTo(cnt));
             Assert.That(ex.Attempts.Select(a => a.Response.StatusCode), Is.All.EqualTo(HttpStatusCode.InternalServerError));
+            Console.WriteLine(ex);
         }
 
         [Test]
@@ -272,6 +273,7 @@ namespace Inceptum.Rest.Tests
                 Assert.That(ex, Is.Not.Null);
                 sw.Stop();
                 Assert.That(sw.ElapsedMilliseconds, Is.GreaterThanOrEqualTo(600));
+                Console.WriteLine(ex);
             }
         }
 
@@ -296,6 +298,7 @@ namespace Inceptum.Rest.Tests
 
                 Assert.IsNotNull(expectedException);
                 Assert.AreEqual("Request was cancelled by consuming code", expectedException.Message);
+                Console.WriteLine(expectedException);
             }
         }
 
