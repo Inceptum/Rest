@@ -162,7 +162,7 @@ namespace Inceptum.Rest
                                     {
                                         content = await attempt.Response.Content.ReadAsAsync<TResult>(mediaTypeFormatters, cancellationToken).ConfigureAwait(false);
                                     }
-                                    catch(Exception e)
+                                    catch (Exception e)
                                     {
                                         /* If response can't be deserialized to TResult, it mean's that error occured, and caller should decide what to do */
                                         writeLine(e.Message);
@@ -202,20 +202,20 @@ namespace Inceptum.Rest
             }
 
             var sb = new StringBuilder();
-            sb.AppendFormat("Failed to get valid request form nodes in pool within {0} timeout ",m_Timeout)
+            sb.AppendFormat("Failed to get valid request from nodes in pool within {0} timeout ", m_Timeout)
                 .AppendLine()
-                .AppendFormat("Pool state:", string.Join(", ", m_UriPool.Select(u => u.Uri)));
+                .AppendFormat("Pool state:");
             foreach (var address in m_UriPool.Uris)
             {
                 sb.AppendLine().AppendFormat("\t{0}", address);
             }
             sb
                 .AppendLine()
-                .AppendFormat("FailTimeout (Timeout address should be excluded from pool after rquest to the address fails): {0}ms", m_UriPool.FailTimeout)
+                .AppendFormat("FailTimeout: {0}ms", m_UriPool.FailTimeout) // (Timeout address should be excluded from pool after request to the address fails)
                 .AppendLine()
-                .AppendFormat("FarmRequestTimeout (The farm request timeout): {0}ms", m_UriPool.PoolEnumerationTimeout)
+                .AppendFormat("FarmRequestTimeout: {0}ms", m_UriPool.PoolEnumerationTimeout) // (The farm request timeout)
                 .AppendLine()
-                .AppendFormat("DelayTimeout (The delay before retring after all addresses has failed and are excluded from pool): {0}ms", m_DelayTimeout)
+                .AppendFormat("DelayTimeout: {0}ms", m_DelayTimeout) //(The delay before retrying after requests to all addresses failed and addresses are excluded from pool)
                 .AppendLine();
             var lastAttempt = attempts.LastOrDefault();
             if (lastAttempt != null)
@@ -225,18 +225,18 @@ namespace Inceptum.Rest
                     .AppendLine()
                     .AppendFormat("\tUri:  {0}", lastAttempt.Uri)
                     .AppendLine()
-                    .AppendFormat("\tRequest:  {0}", lastAttempt.Request.ToString().Replace("\n",   Environment.NewLine + "\t\t"))
+                    .AppendFormat("\tRequest:  {0}", lastAttempt.Request == null ? "NO REQUEST" : lastAttempt.Request.ToString().Replace("\n", Environment.NewLine + "\t\t"))
                     .AppendLine()
-                    .AppendFormat("\tResponse:  {0}", lastAttempt.Response.ToString().Replace(Environment.NewLine,  Environment.NewLine + "\t\t"));
+                    .AppendFormat("\tResponse:  {0}", lastAttempt.Response == null ? "NO RESPONSE" : lastAttempt.Response.ToString().Replace(Environment.NewLine, Environment.NewLine + "\t\t"));
                 if (lastAttempt.Exception != null)
                 {
                     sb
                         .AppendLine()
-                        .AppendFormat("\tException:  {0}", lastAttempt.Exception.ToString().Replace(Environment.NewLine,  Environment.NewLine+ "\t\t"));
+                        .AppendFormat("\tException:  {0}", lastAttempt.Exception.ToString().Replace(Environment.NewLine, Environment.NewLine + "\t\t"));
                 }
             }
 
-           
+
             throw new FarmRequestTimeoutException(sb.ToString(), attempts);
         }
 
