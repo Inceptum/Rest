@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -121,10 +122,9 @@ namespace Inceptum.Rest
         protected async Task<RestResponse<TResult>> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo, CancellationToken cancellationToken, IEnumerable<MediaTypeFormatter> formatters = null)
         {
             if (m_IsDisposed)
-                throw new ObjectDisposedException("");
+                throw new ObjectDisposedException("The rest client is dispossed");
 
             var mediaTypeFormatters = formatters == null ? new MediaTypeFormatterCollection().ToArray() : formatters.ToArray();
-
 
             var attempts = new List<NodeRequestResult>();
             foreach (var baseUri in m_UriPool)
@@ -141,14 +141,16 @@ namespace Inceptum.Rest
                         var request = requestFactory();
 
                         if (request == null)
-                            throw new InvalidOperationException("can not send null request");
+                            throw new InvalidOperationException("Can't send null request");
+
                         if (attempts.Any(r => ReferenceEquals(request, r.Request)))
-                            throw new InvalidOperationException("requestFactory request factory should produce new HttpRequestMessage instance each time it is called");
+                            throw new InvalidOperationException("Request factory should produce new HttpRequestMessage instance each time it is called");
+
                         var attempt = new NodeRequestResult(request);
                         attempts.Add(attempt);
 
                         if (request.RequestUri.IsAbsoluteUri)
-                            throw new InvalidOperationException("request should have relative uri");
+                            throw new InvalidOperationException("Request should have relative uri");
 
                         try
                         {
@@ -156,23 +158,28 @@ namespace Inceptum.Rest
                             if (attempt.Response.StatusCode < HttpStatusCode.InternalServerError)
                             {
                                 var content = default(TResult);
+
                                 if (attempt.Response.Content != null && attempt.Response.Content.Headers.ContentLength > 0)
                                 {
                                     try
                                     {
+                                        // Note[tv]: load request's content into memory to avoid empirically observed situation when 
+                                        // multiple calls to Read...Async for non-buffered content resulted in locking the caller for infinite time.
+                                        await attempt.Response.Content.LoadIntoBufferAsync().ConfigureAwait(false);
                                         content = await attempt.Response.Content.ReadAsAsync<TResult>(mediaTypeFormatters, cancellationToken).ConfigureAwait(false);
                                     }
-                                    catch(Exception e)
+                                    catch (Exception e)
                                     {
                                         /* If response can't be deserialized to TResult, it mean's that error occured, and caller should decide what to do */
                                         writeLine(e.Message);
                                     }
                                 }
+
                                 success = true;
                                 return new RestResponse<TResult>
                                 {
                                     Response = content,
-                                    Headers = attempt.Response.Content.Headers,
+                                    Headers = attempt.Response.Content != null ? attempt.Response.Content.Headers : new StreamContent(Stream.Null).Headers,
                                     StatusCode = attempt.Response.StatusCode,
                                     RawResponse = attempt.Response
                                 };
@@ -201,21 +208,31 @@ namespace Inceptum.Rest
                 }
             }
 
-            var sb = new StringBuilder();
-            sb.AppendFormat("Failed to get valid request from nodes in pool within {0} timeout ({1} attempts were made)", TimeSpan.FromMilliseconds(m_UriPool.PoolEnumerationTimeout), attempts.Count)
+            var errorMessage = buildFarmRequestTimeoutErrorMessage(attempts);
+
+            throw new FarmRequestTimeoutException(errorMessage, attempts);
+        }
+
+        private string buildFarmRequestTimeoutErrorMessage(IReadOnlyCollection<NodeRequestResult> attempts)
+        {
+            if (attempts == null) throw new ArgumentNullException("attempts");
+
+            var sb = new StringBuilder()
+                .AppendFormat("Failed to get valid request from nodes in pool within {0} timeout ({1} attempts were made)", TimeSpan.FromMilliseconds(m_UriPool.PoolEnumerationTimeout), attempts.Count)
                 .AppendLine()
-                .AppendFormat("Pool state:", string.Join(", ", m_UriPool.Select(u => u.Uri)));
+                .AppendFormat("Pool state:");
             foreach (var address in m_UriPool.Uris)
             {
                 sb.AppendLine().AppendFormat("\t{0}", address);
             }
+
             sb
                 .AppendLine()
-                .AppendFormat("FailTimeout (Timeout address should be excluded from pool after rquest to the address fails): {0}ms", m_UriPool.FailTimeout)
+                .AppendFormat("FailTimeout (Timeout address should be excluded from pool after request to the address fails): {0}ms", m_UriPool.FailTimeout)
                 .AppendLine()
                 .AppendFormat("FarmRequestTimeout (The farm request timeout): {0}ms", m_UriPool.PoolEnumerationTimeout)
                 .AppendLine()
-                .AppendFormat("DelayTimeout (The delay before retring after all addresses has failed and are excluded from pool): {0}ms", m_DelayTimeout)
+                .AppendFormat("DelayTimeout (The delay before retring after all addresses has failed and were excluded from pool): {0}ms", m_DelayTimeout)
                 .AppendLine();
             var lastAttempt = attempts.LastOrDefault();
             if (lastAttempt != null)
@@ -225,19 +242,16 @@ namespace Inceptum.Rest
                     .AppendLine()
                     .AppendFormat("\tUri:  {0}", lastAttempt.Uri)
                     .AppendLine()
-                    .AppendFormat("\tRequest:  {0}", lastAttempt.Request.ToString().Replace("\n",   Environment.NewLine + "\t\t"))
+                    .AppendFormat("\tRequest:  {0}", lastAttempt.Request.ToString().Replace("\n", Environment.NewLine + "\t\t"))
                     .AppendLine()
-                    .AppendFormat("\tResponse:  {0}", lastAttempt.Response.ToString().Replace(Environment.NewLine,  Environment.NewLine + "\t\t"));
+                    .AppendFormat("\tResponse:  {0}", lastAttempt.Response.ToString().Replace(Environment.NewLine, Environment.NewLine + "\t\t"));
                 if (lastAttempt.Exception != null)
                 {
-                    sb
-                        .AppendLine()
-                        .AppendFormat("\tException:  {0}", lastAttempt.Exception.ToString().Replace(Environment.NewLine,  Environment.NewLine+ "\t\t"));
+                    sb.AppendLine()
+                        .AppendFormat("\tException:  {0}", lastAttempt.Exception.ToString().Replace(Environment.NewLine, Environment.NewLine + "\t\t"));
                 }
             }
-
-           
-            throw new FarmRequestTimeoutException(sb.ToString(), attempts);
+            return sb.ToString();
         }
 
         public void Dispose()
