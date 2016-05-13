@@ -228,11 +228,11 @@ namespace Inceptum.Rest
 
             sb
                 .AppendLine()
-                .AppendFormat("FailTimeout (Timeout address should be excluded from pool after request to the address fails): {0}ms", m_UriPool.FailTimeout)
+                .AppendFormat("FailTimeout: {0}ms", m_UriPool.FailTimeout) // (Timeout address should be excluded from pool after request to the address fails)
                 .AppendLine()
-                .AppendFormat("FarmRequestTimeout (The farm request timeout): {0}ms", m_UriPool.PoolEnumerationTimeout)
+                .AppendFormat("FarmRequestTimeout: {0}ms", m_UriPool.PoolEnumerationTimeout) // (The farm request timeout)
                 .AppendLine()
-                .AppendFormat("DelayTimeout (The delay before retring after all addresses has failed and were excluded from pool): {0}ms", m_DelayTimeout)
+                .AppendFormat("DelayTimeout: {0}ms", m_DelayTimeout) // (The delay before retring after all addresses has failed and were excluded from pool)
                 .AppendLine();
             var lastAttempt = attempts.LastOrDefault();
             if (lastAttempt != null)
@@ -242,9 +242,9 @@ namespace Inceptum.Rest
                     .AppendLine()
                     .AppendFormat("\tUri:  {0}", lastAttempt.Uri)
                     .AppendLine()
-                    .AppendFormat("\tRequest:  {0}", lastAttempt.Request.ToString().Replace("\n", Environment.NewLine + "\t\t"))
+                    .AppendFormat("\tRequest:  {0}", lastAttempt.Request == null ? "NO REQUEST" : lastAttempt.Request.ToString().Replace("\n", Environment.NewLine + "\t\t"))
                     .AppendLine()
-                    .AppendFormat("\tResponse:  {0}", lastAttempt.Response.ToString().Replace(Environment.NewLine, Environment.NewLine + "\t\t"));
+                    .AppendFormat("\tResponse:  {0}", lastAttempt.Response == null ? "NO RESPONSE" : lastAttempt.Response.ToString().Replace(Environment.NewLine, Environment.NewLine + "\t\t"));
                 if (lastAttempt.Exception != null)
                 {
                     sb.AppendLine()
