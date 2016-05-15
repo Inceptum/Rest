@@ -19,7 +19,7 @@ namespace Inceptum.Rest.Tests
             Stopwatch sw = Stopwatch.StartNew();
             var maxValue = 10;
             int[] sequence1 = Enumerable.Range(0, 10000).Select(i => BitConverter.ToInt32(Guid.NewGuid().ToByteArray(), 4) % maxValue).ToArray();
-            Console.WriteLine("{0}ms ", sw.ElapsedMilliseconds );
+            Console.WriteLine("{0}ms ", sw.ElapsedMilliseconds);
             foreach (var i in sequence1)
             {
                 if (!dictionary1.ContainsKey(i))
@@ -28,7 +28,7 @@ namespace Inceptum.Rest.Tests
             }
             foreach (KeyValuePair<int, int> pair in dictionary1.OrderBy(p => p.Key))
             {
-                Console.WriteLine("{0}:\t{1}",pair.Key,pair.Value);
+                Console.WriteLine("{0}:\t{1}", pair.Key, pair.Value);
             }
 
             sw = Stopwatch.StartNew();
@@ -46,7 +46,7 @@ namespace Inceptum.Rest.Tests
             }).ToArray();
 
 
-            Console.WriteLine("{0}ms ", sw.ElapsedMilliseconds );
+            Console.WriteLine("{0}ms ", sw.ElapsedMilliseconds);
             foreach (var i in sequence2)
             {
                 if (!dictionary2.ContainsKey(i))
@@ -54,35 +54,28 @@ namespace Inceptum.Rest.Tests
                 dictionary2[i]++;
 
             }
-            foreach (KeyValuePair<int, int> pair in dictionary2.OrderBy(p=>p.Key))
+            foreach (KeyValuePair<int, int> pair in dictionary2.OrderBy(p => p.Key))
             {
                 Console.WriteLine("{0}:\t{1}", pair.Key, pair.Value);
             }
 
-/*
+            /*
 
-            for (int i = 0; i < 10000; i++)
-            {
-                Console.WriteLine("{0}\t{1}", sequence1[i], sequence2[i]);
-            }*/
+                        for (int i = 0; i < 10000; i++)
+                        {
+                            Console.WriteLine("{0}\t{1}", sequence1[i], sequence2[i]);
+                        }*/
         }
 
         [Test, Ignore]
         public void StopwatchTest()
         {
-            Stopwatch sw=Stopwatch.StartNew();
+            Stopwatch sw = Stopwatch.StartNew();
             while (true)
             {
                 Thread.Sleep(1000);
-                Console.WriteLine("{0}\t\t{1}",sw.ElapsedMilliseconds,DateTime.Now);
+                Console.WriteLine("{0}\t\t{1}", sw.ElapsedMilliseconds, DateTime.Now);
             }
-        }
-
-        [Test]
-        public void DefaultCancellationTokenIsTheNoneOneTest()
-        {
-            Assert.IsTrue(default(CancellationToken) == CancellationToken.None);
-            Assert.AreEqual(default(CancellationToken), CancellationToken.None);
         }
     }
 }

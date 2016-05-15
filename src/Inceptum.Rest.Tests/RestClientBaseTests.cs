@@ -9,6 +9,7 @@ using System.Net.Http.Formatting;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Http;
+using System.Web.Http.Routing;
 using System.Web.Http.SelfHost;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -16,54 +17,6 @@ using NUnit.Framework;
 
 namespace Inceptum.Rest.Tests
 {
-    public class RestClient : RestClientBase
-    {
-        public RestClient(string[] addresses, int failTimeout = 15000, int farmRequestTimeout = 120000,
-            long singleAddressTimeout = 60000, int delayTimeout = 5000, Func<HttpMessageHandler> handlerFactory = null)
-            : base(addresses, failTimeout, farmRequestTimeout, singleAddressTimeout, delayTimeout, handlerFactory)
-        {
-        }
-
-        public async Task<RestResponse<TResult>> SendAsync<TResult>(Func<HttpRequestMessage> requestFactory, CultureInfo cultureInfo)
-        {
-            return await SendAsync<TResult>(requestFactory, cultureInfo, CancellationToken.None);
-        }
-
-        public Task<RestResponse<string>> GetData(Uri relativeUri, CultureInfo cultureInfo, CancellationToken cancellationToken)
-        {
-            return GetData<string>(relativeUri, cultureInfo, cancellationToken);
-        }
-    }
-
-    public class TestController : ApiController
-    {
-        static TestController()
-        {
-            FailingPorts = new List<int>();
-        }
-
-        public static List<int> FailingPorts { get; set; }
-        [HttpGet, Route("ok")]
-        public string Get()
-        {
-            var port = Request.RequestUri.Port;
-            var fail = FailingPorts.Contains(port);
-            Console.WriteLine("{0}\t{1}\t{2}", DateTime.Now, port, fail ? 503 : 200);
-            Thread.Sleep(10);
-            if (fail)
-                throw new Exception("Sorry. Out of order.");
-            return port.ToString(CultureInfo.InvariantCulture);
-        }
-
-        [HttpGet, Route("delay")]
-        public async Task Delay(int seconds)
-        {
-            Console.WriteLine("Delay for " + seconds + " seconds");
-            await Task.Delay(TimeSpan.FromSeconds(seconds));
-            Console.WriteLine("Unfter delay for " + seconds + " seconds");
-        }
-    }
-
     [TestFixture]
     public class RestClientBaseTests
     {
